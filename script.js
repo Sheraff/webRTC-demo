@@ -32,7 +32,13 @@ class RTCPeer {
 		this.dataChannel.addEventListener('message', () => {
 			console.log('CONNECTED !')
 			this.connected = true
-			fetch(`/purge.php?id=${this.id}`)
+			fetch(`./php/purge.php?id=${this.id}`, {
+				cache: 'no-store',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				},
+			})
 		}, {once: true})
 
 		if(this.dataChannel.readyState === 'open') {
@@ -69,8 +75,9 @@ class RTCPeer {
 			throw new Error('wrong type', type)
 		const description = await this.peerConnection[type === 'answer' ? 'createAnswer' : 'createOffer']()
 		this.peerConnection.setLocalDescription(description)
-		fetch(`/${type}`, {
+		fetch(`./php/${type}.php`, {
 			method: 'POST',
+			cache: 'no-store',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				id,
@@ -83,7 +90,13 @@ class RTCPeer {
 		if(type !== 'answer' && type !== 'offer')
 			throw new Error('wrong type', type)
 		
-		const data = await fetch(`/${type}?id=${id}`)
+		const data = await fetch(`./php/${type}.php?id=${id}`, {
+			cache: 'no-store',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			},
+		})
 		try {
 			const { description } = await data.json()
 			if(!description)
@@ -104,7 +117,13 @@ class RTCPeer {
 	}
 
 	async getIceCandidates(id) {
-		const data = await fetch(`/candidate?id=${id}`)
+		const data = await fetch(`./php/candidate.php?id=${id}`, {
+			cache: 'no-store',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			},
+		})
 		try {
 			const { candidates } = await data.json()
 			if(candidates && Array.isArray(candidates) && candidates.length)
@@ -119,8 +138,9 @@ class RTCPeer {
 	async onIceCandidate({candidate}) {
 		if(!candidate) 
 			return
-		fetch(`/candidate`, {
+		fetch(`./php/candidate.php`, {
 			method: 'POST',
+			cache: 'no-store',
 			headers: {
 				'Accept': 'application/json',
 				'Content-Type': 'application/json'

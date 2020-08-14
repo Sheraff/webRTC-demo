@@ -1,9 +1,9 @@
 <?php
 
 $id = $_GET["id"];
-purgeFileId('./candidate/data.txt', $id);
-purgeFileId('./answer/data.txt', $id);
-purgeFileId('./offer/data.txt', $id);
+purgeFileId('./candidate.txt', $id);
+purgeFileId('./answer.txt', $id);
+purgeFileId('./offer.txt', $id);
 
 function purgeFileId($path, $id) {
 	$lines = file($path);

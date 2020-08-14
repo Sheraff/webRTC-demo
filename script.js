@@ -1,161 +1,63 @@
-class RTCPeer {
-	constructor(id) {
-		this.id = id
-		this.retry = 1000
-		this.connected = false
+import RTCPeer from './webrtc.js'
 
-		const config = {
-			iceServers: [{
-				urls: [
-					// https://gist.github.com/zziuni/3741933
-					"stun:stun.l.google.com:19302",
-					"stun:stun1.l.google.com:19302",
-					"stun:stun2.l.google.com:19302",
-					"stun:stun3.l.google.com:19302",
-					"stun:stun4.l.google.com:19302",
-				]
-			}]
-		}
+const firstForm = document.getElementById('create')
+const secondForm = document.getElementById('connect')
+const content = document.getElementById('content')
+const sandbox = document.getElementById('sandbox')
 
-		this.peerConnection = new RTCPeerConnection(config)
-		this.peerConnection.addEventListener('icecandidate', this.onIceCandidate.bind(this))
-	}
+let rtcPeer
+disableForm(secondForm)
 
-	onMessage({data}) {
-		console.log(`${this.id} received: ${data}`)
-	}
-	
-	useDataChannel(dataChannel) {
-		this.dataChannel = dataChannel
-		this.dataChannel.binaryType = 'arraybuffer'
-		this.dataChannel.addEventListener('message', this.onMessage.bind(this))
-		this.dataChannel.addEventListener('message', () => {
-			console.log('CONNECTED !')
-			this.connected = true
-			fetch(`./php/purge.php?id=${this.id}`, {
-				cache: 'no-store',
-				headers: {
-					'Accept': 'application/json',
-					'Content-Type': 'application/json'
-				},
-			})
-		}, {once: true})
-
-		if(this.dataChannel.readyState === 'open') {
-			this.dataChannel.send(`hello from ${this.id}`)
-		} else {
-			this.dataChannel.onopen = () => this.dataChannel.send(`hello from ${this.id}`)
-		}
-	}
-
-	async joinHost(id) {
-		this.loopGetIce(id)
-		this.peerConnection.ondatachannel = event => this.useDataChannel(event.channel)
-		let foundOffer = await this.receiveId('offer', id)
-		while (!foundOffer) {
-			await new Promise(resolve => setTimeout(resolve, this.retry))
-			foundOffer = await this.receiveId('offer', id)
-		}
-		await this.sendId('answer', id)
-	}
-
-	async startHosting(id) {
-		this.loopGetIce(id)
-		this.useDataChannel(this.peerConnection.createDataChannel("test"))
-		await this.sendId('offer')
-		let foundAnswer = await this.receiveId('answer')
-		while (!foundAnswer) {
-			await new Promise(resolve => setTimeout(resolve, this.retry))
-			foundAnswer = await this.receiveId('answer')
-		}
-	}
-
-	async sendId(type, id = this.id) {
-		if(type !== 'answer' && type !== 'offer')
-			throw new Error('wrong type', type)
-		const description = await this.peerConnection[type === 'answer' ? 'createAnswer' : 'createOffer']()
-		this.peerConnection.setLocalDescription(description)
-		fetch(`./php/${type}.php`, {
-			method: 'POST',
-			cache: 'no-store',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				id,
-				description
-			})
-		})
-	}
-
-	async receiveId(type, id = this.id) {
-		if(type !== 'answer' && type !== 'offer')
-			throw new Error('wrong type', type)
-		
-		const data = await fetch(`./php/${type}.php?id=${id}`, {
-			cache: 'no-store',
-			headers: {
-				'Accept': 'application/json',
-				'Content-Type': 'application/json'
-			},
-		})
-		try {
-			const { description } = await data.json()
-			if(!description)
-				return false
-			await this.peerConnection.setRemoteDescription(new RTCSessionDescription(description))
-			return true
-		} catch (e) {
-			console.error(e)
-			return false
-		}
-	}
-
-	async loopGetIce(id) {
-		if(!this.connected) {
-			await this.getIceCandidates(id)
-			setTimeout(() => this.loopGetIce(id), this.retry)
-		}
-	}
-
-	async getIceCandidates(id) {
-		const data = await fetch(`./php/candidate.php?id=${id}`, {
-			cache: 'no-store',
-			headers: {
-				'Accept': 'application/json',
-				'Content-Type': 'application/json'
-			},
-		})
-		try {
-			const { candidates } = await data.json()
-			if(candidates) {
-				Object.values(candidates).forEach(candidate => {
-					this.peerConnection.addIceCandidate(JSON.parse(candidate))
-				})
-			}
-		} catch (e) { 
-			console.error(e)
-		}
-	}
-
-	async onIceCandidate({candidate}) {
-		if(!candidate) 
-			return
-		fetch(`./php/candidate.php`, {
-			method: 'POST',
-			cache: 'no-store',
-			headers: {
-				'Accept': 'application/json',
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				id: this.id,
-				candidate: JSON.stringify(candidate)
-			})
-		})
+firstForm.querySelector('button').addEventListener('click', validateFirstForm)
+firstForm.addEventListener('submit', validateFirstForm)
+function validateFirstForm(e) {
+	e.preventDefault()
+	const value = firstForm.querySelector('input').value
+	if(value) {
+		disableForm(firstForm)
+		rtcPeer = new RTCPeer(value)
+		rtcPeer.connectionPromise.then(useChannel)
+		enableForm(secondForm)
+		secondForm.querySelector('input').focus()
 	}
 }
 
-window.initRTC = (id) => {
-	return new RTCPeer(id)
+secondForm.addEventListener('submit', e => e.preventDefault())
+secondForm.querySelector('button[data-action=host]').addEventListener('click', () => {
+	const value = secondForm.querySelector('input').value
+	if(value) {
+		disableForm(secondForm)
+		rtcPeer.startHosting(value)
+	}
+})
+secondForm.querySelector('button[data-action=join]').addEventListener('click', () => {
+	const value = secondForm.querySelector('input').value
+	if(value) {
+		disableForm(secondForm)
+		rtcPeer.joinHost(value)
+	}
+})
+
+function useChannel(channel) {
+	sandbox.removeAttribute('disabled')
+	sandbox.focus()
+	channel.addEventListener('message', ({data}) => content.value = data)
+	sandbox.addEventListener('input', () => channel.send(sandbox.value))
 }
 
-console.log('ready: window.initRTC(id)')
+function disableForm(form) {
+	for (let child of form.children) {
+		child.setAttribute('disabled', "")
+	}
+}
+
+function enableForm(form) {
+	for (let child of form.children) {
+		child.removeAttribute('disabled')
+	}
+}
+
+window.addEventListener('beforeunload', async () => {
+	if(rtcPeer)
+		await rtcPeer.purge()
+})

@@ -1,2 +1,14 @@
 <script src="script.js" type="module"></script>
-<div id="content"></div>
+<form id="create">
+    <input type="text" name="self" id="self">
+    <label for="self">Your name</label>
+    <button type="button">Validate</button>
+</form>
+<form id="connect">
+    <input type="text" name="peer" id="peer">
+    <label for="peer">Your peer</label>
+    <button type="button" data-action="host">Host</button>
+    <button type="button" data-action="join">Join</button>
+</form>
+<textarea id="sandbox" cols="30" rows="10" disabled></textarea>
+<textarea id="content" cols="30" rows="10" disabled></textarea>

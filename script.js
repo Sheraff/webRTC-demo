@@ -15,7 +15,7 @@ function validateFirstForm(e) {
 	const value = firstForm.querySelector('input').value
 	if(value) {
 		disableForm(firstForm)
-		rtcPeer = new RTCPeer(value)
+		rtcPeer = new RTCPeer(value.replace(/\s/g, '-'))
 		rtcPeer.connectionPromise.then(useChannel)
 		enableForm(secondForm)
 		secondForm.querySelector('input').focus()
@@ -27,14 +27,14 @@ secondForm.querySelector('button[data-action=host]').addEventListener('click', (
 	const value = secondForm.querySelector('input').value
 	if(value) {
 		disableForm(secondForm)
-		rtcPeer.startHosting(value)
+		rtcPeer.startHosting(value.replace(/\s/g, '-'))
 	}
 })
 secondForm.querySelector('button[data-action=join]').addEventListener('click', () => {
 	const value = secondForm.querySelector('input').value
 	if(value) {
 		disableForm(secondForm)
-		rtcPeer.joinHost(value)
+		rtcPeer.joinHost(value.replace(/\s/g, '-'))
 	}
 })
 

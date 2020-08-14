@@ -126,10 +126,11 @@ class RTCPeer {
 		})
 		try {
 			const { candidates } = await data.json()
-			if(candidates && Array.isArray(candidates) && candidates.length)
-				candidates.forEach(candidate => {
+			if(candidates) {
+				Object.values(candidates).forEach(candidate => {
 					this.peerConnection.addIceCandidate(JSON.parse(candidate))
 				})
+			}
 		} catch (e) { 
 			console.error(e)
 		}

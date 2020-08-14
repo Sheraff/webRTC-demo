@@ -26,7 +26,7 @@ The order of operations shouldn't matter.
 
 You can also do everything in the same client but it's less fun
 
-``` javscript
+``` javascript
 const rtcClient1 = window.initRTC('some-id-1')
 const rtcClient2 = window.initRTC('some-id-2')
 rtcClient1.startHosting('some-id-2')

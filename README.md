@@ -17,7 +17,18 @@ rtcClient1.startHosting('some-id-2')
 
 ``` javascript
 const rtcClient2 = window.initRTC('some-id-2')
-rtcClient2.startHosting('some-id-1')
+rtcClient2.joinHost('some-id-1')
 ```
 
 The order of operations shouldn't matter.
+
+----
+
+You can also do everything in the same client but it's less fun
+
+``` javscript
+const rtcClient1 = window.initRTC('some-id-1')
+const rtcClient2 = window.initRTC('some-id-2')
+rtcClient1.startHosting('some-id-2')
+rtcClient2.joinHost('some-id-1')
+```
